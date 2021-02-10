@@ -1,18 +1,23 @@
-USE work;
+USE Steam;
 
 DROP TABLE IF EXISTS GAMES;
 DROP TABLE IF EXISTS PLAYERS;
 DROP TABLE IF EXISTS DEVELOPERS;
 DROP TABLE IF EXISTS POSTS;
 DROP TABLE IF EXISTS REVIEWS;
-DROP TABLE IF EXISTS GROUPS;
+DROP TABLE IF EXISTS REVIEWED;
+DROP TABLE IF EXISTS WROTE;
+DROP TABLE IF EXISTS GROUPS_;
 DROP TABLE IF EXISTS FRIENDS;
 DROP TABLE IF EXISTS GAME_LIBRARY;
 DROP TABLE IF EXISTS DEVELOPER_GAMES;
+DROP TABLE IF EXISTS DEVELOPED;
 DROP TABLE IF EXISTS IS_PART_OF;
 DROP TABLE IF EXISTS ASSOCIATED_GAMES;
 DROP TABLE IF EXISTS REVIEWED_GAMES;
 DROP TABLE IF EXISTS GROUP_POSTS;
+DROP TABLE IF EXISTS GAME_ACHIEVEMENTS;
+
 /*****************Entidades***********************/
 
 CREATE TABLE
@@ -21,8 +26,8 @@ GAMES(
 	Name varchar(255) NOT NULL,
 	Price decimal(5,2) NOT NULL,
 	DeveloperName varchar(255) NOT NULL,
-	ReleaseDate DATE NOT NULL
-	/*CONSTRAINT Game_developer FOREIGN KEY (DeveloperName) REFERENCES DEVELOPER(Name)*/
+	ReleaseDate DATE NOT NULL,
+	MinimumPlayerAge int(3)NULL
 );
 
 CREATE TABLE
@@ -52,7 +57,7 @@ POSTS(
 CREATE TABLE
 REVIEWS(
 	Id int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT,
-  UserId int(11) NOT NULL,
+    UserId int(11) NOT NULL,
 	GameName varchar(255) NOT NULL,
 	ReviewDate datetime NOT NULL,
 	ReviewText varchar(255) DEFAULT NULL,
@@ -61,15 +66,19 @@ REVIEWS(
 );
 
 CREATE TABLE
-GROUPS(
+GROUPS_(
 	Id int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	Name varchar(254) NOT NULL
 );
 
 /**********************************************/
-CREATE TABLE
-ACHIEVEMENTS
 
+CREATE TABLE
+GAME_ACHIEVEMENTS(
+	GameId int(11) NOT NULL,
+	Achievement varchar(255) NOT NULL,
+	PRIMARY KEY( GameId,Achievement)
+);
 
 /******************RELAÇÕES*******************/
 CREATE TABLE
@@ -77,8 +86,6 @@ FRIENDS(
 	PlayerId1 int(11) NOT NULL,
 	PlayerId2 int(11) NOT NULL,
 	PRIMARY KEY(PlayerId1,PlayerId2)
-	/*CONSTRAINT Friends_1 FOREIGN KEY (PlayerId1) REFERENCES PLAYERS(Id) ON DELETE CASCADE,
-	CONSTRAINT Friends_2 FOREIGN KEY (PlayerId2) REFERENCES PLAYERS(Id) ON DELETE CASCADE*/
 );
 
 CREATE TABLE
@@ -89,8 +96,8 @@ GAME_LIBRARY(
 );
 
 CREATE TABLE
-DEVELOPER_GAMES(
-	DeveloperName int(11) NOT NULL,
+DEVELOPED(
+	DeveloperName varchar(255) NOT NULL,
 	GameId int(11) NOT NULL,
 	PRIMARY KEY(DeveloperName,GameId)
 );
@@ -123,55 +130,70 @@ GROUP_POSTS(
 	PRIMARY KEY(GroupId,PostId)
 );
 
+CREATE TABLE
+REVIEWED(
+	ReviewId int(11) NOT NULL,
+	PlayerId int(11) NOT NULL,
+	PRIMARY KEY(ReviewId,PlayerId)
+);
+
+CREATE TABLE
+WROTE(
+	PostId int(11) NOT NULL,
+	PlayerId int(11) NOT NULL,
+	PRIMARY KEY(PostId,PlayerId)
+);
+
 /******************************************************************/
 
 
 /************************INSERT VALUES****************************/
-
+--                       Entidades                                
 INSERT INTO
-GAMES(Name,Price,DeveloperName,Achievements,ReleaseDate)
+GAMES(Name,Price,DeveloperName,ReleaseDate,MinimumPlayerAge)
 VALUES
-/*1*/	('Witcher 3',8.99,'CD PROJEKT RED','Melhor RPG do Ano','2015-05-19'),
-/*2*/	('Counter-Strike 1.6',8.99,'Valve Corporation',NULL,'2000-11-08'),
-/*3*/	('Counter-Strike Global Offensive',0.00,'VALVE Corporation','Melhor FPS do Ano','2012-08-21'),
-/*4*/	('DOTA 2',0.00,'Valve Corporation','Best MOBA','2013-07-09'),
-/*5*/	('GTA V',8.99,'ROCKSTAR GAMES','Melhor Modo Multiplayer','2013-09-17'),
-/*6*/	('The Last of Us',19.99,'Naughty Dog','Jogo do Ano','2013-06-14'),
-/*7*/	('ARK: Survival Evolved',54.99,'Studio Wildcard',NULL,'2017-08-27'),
-/*8*/	('Garry\'s Mod',9.99,'Valve Corporation',NULL,'2006-11-29'),
-/*9*/	('The Elder Scrols V: Skyrim',4.99,'Bethesda Game Studio',NULL,'2011-11-11'),
-/*10*/('Tomb Raider(2013)',4.99,'Crystal Dynamics','Best Action Game','2013-03-05'),
-/*12*/('Divinity: Original Sin 2',44.99,'Larian Studios',NULL,'2017-09-14'),
-/*13*/('Team Fortress 2',0.00,'Valve Corporation',NULL,'2007-09-10'),
-/*14*/('Rocket League',19.99,'Psyonix LLC','Best independent game','2015-07-07'),
-/*15*/('Borderlands 2',7.49,'Gearbox Software','Game of the Year','2012-09-20'),
-/*16*/('FINAL FANTASY XIV Online',9.99,'Square Enix',NULL,'2014-02-18'),
-/*17*/('METAL GEAR SOLID V: THE PHANTOM PAIN',8.99,'Konami Digital Entertainment',NULL,'2006-09-01'),
-/*18*/('Middle-earth™: Shadow of Mordor™',39.99,'Monolith Productions',NULL,'2017-10-10'),
-/*19*/('DARK SOULS™ III',14.99,'FromSoftware','Hardest Game of the Year','2016-04-11'),
-/*20*/('Saints Row: The Third',9.99,'Volition',NULL,'2011-11-14'),
-/*21*/('Starbound',13.99,'Chucklefish',NULL,'2016-07-22'),
-/*24*/('The Elder Scrolls Online',19.99,'Zenimax Online Studios',NULL,'2014-04-04'),
-/*25*/('Portal 2',8.19,'Valve Corporation','Mellhor jogo para Pc','2011-04-19'),
-/*26*/('Sid Meier\'s Civilization V',39.99,'Firaxis Games',NULL,'2019-02-14'),
-/*27*/('Total War: SHOGUN 2',7.49,'CREATIVE ASSEMBLY',NULL,'2011-03-15'),
-/*28*/('Hades',20.99,'Supergiant Games',NULL,'2019-12-10'),
-/*29*/('Far Cry® 3',19.99,'Ubisoft Montreal','Melhor Jogo de Ação','2012-11-29'),
-/*30*/('PLAYERUNKNOWN\'S BATTLEGROUNDS',19.99,'Ubisoft Montreal','Best Multiplayer Game','2017-12-21');
+/*1*/	('Witcher 3',8.99,'CD PROJEKT RED','2015-05-19',18),
+/*2*/	('Counter-Strike 1.6',8.99,'Valve Corporation','2000-11-08',18),
+/*3*/	('Counter-Strike Global Offensive',0.00,'VALVE Corporation','2012-08-21',18),
+/*4*/	('DOTA 2',0.00,'Valve Corporation','2013-07-09',NULL),
+/*5*/	('GTA V',8.99,'ROCKSTAR GAMES','2013-09-17',16),
+/*6*/	('The Last of Us',19.99,'Naughty Dog','2013-06-14',NULL),
+/*7*/	('ARK: Survival Evolved',54.99,'Studio Wildcard','2017-08-27',NULL),
+/*8*/	('Garry\'s Mod',9.99,'Valve Corporation','2006-11-29',NULL),
+/*9*/	('The Elder Scrols V: Skyrim',4.99,'Bethesda Game Studio','2011-11-11',NULL),
+/*10*/  ('Tomb Raider(2013)',4.99,'Crystal Dynamics','2013-03-05',14),
+/*11*/  ('Left 4 Dead',8.19,'Valve Corporation','2008-11-17',16),
+/*12*/  ('Divinity: Original Sin 2',44.99,'Larian Studios','2017-09-14',NULL),
+/*13*/  ('Team Fortress 2',0.00,'Valve Corporation','2007-09-10',NULL),
+/*14*/  ('Rocket League',19.99,'Psyonix LLC','2015-07-07',NULL),
+/*15*/  ('Borderlands 2',7.49,'Gearbox Software','2012-09-20',NULL),
+/*16*/  ('FINAL FANTASY XIV Online',9.99,'Square Enix','2014-02-18',NULL),
+/*17*/  ('METAL GEAR SOLID V: THE PHANTOM PAIN',8.99,'Konami Digital Entertainment','2006-09-01',NULL),
+/*18*/  ('Middle-earth™: Shadow of Mordor™',39.99,'Monolith Productions','2017-10-10',NULL),
+/*19*/  ('DARK SOULS™ III',14.99,'FromSoftware','2016-04-11',NULL),
+/*20*/  ('Saints Row: The Third',9.99,'Volition','2011-11-14',NULL),
+/*21*/  ('Starbound',13.99,'Chucklefish','2016-07-22',NULL),
+/*22*/  ('The Elder Scrolls Online',19.99,'Zenimax Online Studios','2014-04-04',NULL),
+/*23*/  ('Portal 2',8.19,'Valve Corporation','2011-04-19',NULL),
+/*24*/  ('Sid Meier\'s Civilization V',39.99,'Firaxis Games','2019-02-14',NULL),
+/*25*/  ('Total War: SHOGUN 2',7.49,'CREATIVE ASSEMBLY','2011-03-15',NULL),
+/*26*/  ('Hades',20.99,'Supergiant Games','2019-12-10',16),
+/*27*/  ('Far Cry® 3',19.99,'Ubisoft Montreal','2012-11-29',18),
+/*28*/  ('PLAYERUNKNOWN\'S BATTLEGROUNDS',19.99,'Ubisoft Montreal','2017-12-21',16);
 
 INSERT INTO
 PLAYERS(Nickname,SignUpDate,Wallet,Country)
 VALUES
-	('Roger Kings','2003-04-22',25.39,'Portugal'),
-	('Roberto_A(l)berto','2003-06-09',99.99,'Portugal'),
-	('Felix Berta','2003-06-10',99.98,'França'),
-	('Vladimir','2003-09-11',99.97,'Russia'),
-	('Marxum','2011-10-08',20.00,'Portugal'),
-	('Netcan','2012-04-21',23.00,'Portugal'),
-	('SNH','2012-08-28',2.63,'Portugal'),
-	('Dudas','2015-03-05',20.00,'Portugal'),
-	('Petroski','2016-03-06',0.00,'Polónia'),
-	('Bolsonas','2019-01-01',9.99,'Brasil');
+/*1*/	('Roger Kings','2003-04-22',25.39,'Portugal'),
+/*2*/	('Roberto_A(l)berto','2003-06-09',99.99,'Portugal'),
+/*3*/	('Felix Berta','2003-06-10',99.98,'França'),
+/*4*/	('Vladimir','2003-09-11',99.97,'Russia'),
+/*5*/	('Marxum','2011-10-08',20.00,'Portugal'),
+/*6*/	('Netcan','2012-04-21',23.00,'Portugal'),
+/*7*/	('SNH','2012-08-28',2.63,'Portugal'),
+/*8*/	('Dudas','2015-03-05',20.00,'Portugal'),
+/*9*/	('Petroski','2016-03-06',0.00,'Polónia'),
+/*10*/	('Bolsonas','2019-01-01',9.99,'Brasil');
 
 INSERT INTO
 DEVELOPERS(Name,Country)
@@ -194,7 +216,10 @@ VALUES
 /*15*/('Firaxis Games','Estados Unidos'),
 /*16*/('CREATIVE ASSEMBLY','Reino Unido'),
 /*17*/('Supergiant Games','Estados Unidos'),
-/*18*/('Ubisoft Montreal','França');
+/*18*/('Ubisoft Montreal','França'),
+/*19*/('Square Enix','Japão'),
+/*20*/('Psyonix LLC','Estados Unidos'),
+/*21*/('Chucklefish','Reino Unido');
 
 INSERT INTO
 POSTS(PostDate,PostText,GroupId,UserId)
@@ -220,7 +245,7 @@ VALUES
 /*8*/(9,'Saints Row: The Third','2011-07-13 05:02:01',NULL,2);
 
 INSERT INTO
-GROUPS(Name)
+GROUPS_(Name)
 VALUES
 /*1*/ ('Zulmira Lovers'),
 /*2*/ ('Framerate Police'),
@@ -229,11 +254,417 @@ VALUES
 /*5*/ ('Programadores do Tetris'),
 /*6*/ ('Fãs do Tiagovski');
 
+--                                   LIGAÇÔES
+
+INSERT INTO
+GAME_ACHIEVEMENTS(GameId,Achievement)
+VALUES
+	(1,'Best RPG of the Year'),
+	(1,'Game of the Year'),
+	(3,'Best FPS of the Year'),
+	(4,'Best MOBA'),
+	(5,'Best Multiplayer Game'),
+	(6,'Game of the Year'),
+	(10,'Best Action Game'),
+	(14,'Best Independent Game'),
+	(15,'Game of the Year'),
+	(19,'Hardest Game of the Year'),	
+	(25,'Best Game for Pc'),
+	(27,'Best Action Game'),
+	(28,'Best Multiplayer Game');
+
+INSERT INTO 
+FRIENDS(PlayerId1,PlayerId2)
+VALUES
+	(1,2),
+	(1,3),
+	(1,4),
+	(1,5),
+	(1,6),
+	(1,7),
+	(1,8),
+	(1,9),
+
+	(2,3),
+	(2,5),
+	(2,6),
+	(2,7),
+	(2,8),
+
+	(4,9),
+
+	(5,6),
+	(5,7),
+	(5,8),
+
+	(6,7),
+	(6,8),
+
+	(7,8);
+
+INSERT INTO
+GAME_LIBRARY(PlayerId,GameId)
+VALUES
+	(1,2),
+	(1,8),
+	(1,13),
+	(1,17),
+
+	(2,4),
+	(2,7),
+	(2,15),
+
+	(3,4),
+	(3,7),
+	(3,15),
+
+	(4,3),
+
+	(5,1),
+	(5,2),
+	(5,3),
+	(5,4),
+	(5,5),
+	(5,6),
+	(5,10),
+	(5,14),
+	(5,19),
+	(5,28),
+
+	(6,1),
+	(6,2),
+	(6,3),
+	(6,4),
+	(6,5),
+	(6,6),
+	(6,10),
+	(6,14),
+	(6,19),
+	(6,28),	
+
+	(7,1),
+	(7,2),
+	(7,3),
+	(7,4),
+	(7,5),
+	(7,6),
+	(7,10),
+	(7,14),
+	(7,19),
+	(7,28),
+
+	(8,3),
+	(8,5),
+	(8,6),
+	(8,10),
+	(8,14),
+
+	(9,3),
+
+	(10,1),
+	(10,2),
+	(10,3),
+	(10,4),
+	(10,5),
+	(10,6),
+	(10,7),
+	(10,8),
+	(10,9),
+	(10,10),
+	(10,11),
+	(10,12),
+	(10,13),
+	(10,14),
+	(10,15),
+	(10,16),
+	(10,17),
+	(10,18),
+	(10,19),
+	(10,20),
+	(10,21),
+	(10,22),
+	(10,23),
+	(10,24),
+	(10,25),
+	(10,26),
+	(10,27),
+	(10,28);
+
+INSERT INTO
+DEVELOPED(DeveloperName,GameId)
+VALUES
+	('CD PROJEKT RED',1),
+	('Valve Corporation',2),
+	('Valve Corporation',3),
+	('Valve Corporation',4),
+	('ROCKSTAR GAMES',5),
+	('Naughty Dog',6),
+	('Studio Wildcard',7),
+	('Valve Corporation',8),
+	('Bethesda Game Studio',9),
+	('Crystal Dynamics',10),
+	('Valve Corporation',11),
+	('Larian Studios',12),
+	('Valve Corporation',13),
+	('Psyonix LLC',14),
+	('Gearbox Software',15),
+	('Square Enix',16),
+	('Konami Digital Entertainment',17),
+	('Monolith Productions',18),
+	('FromSoftware',19),
+	('Volition',20),
+	('Chucklefish',21),
+	('Zenimax Online Studios',22),
+	('Valve Corporation',23),
+	('Firaxis Games',24),
+	('CREATIVE ASSEMBLY',25),
+	('Supergiant Games',26),
+	('Ubisoft Montreal',27),
+	('Ubisoft Montreal',28);
+
+INSERT INTO 
+IS_PART_OF(GroupId,PlayerId)
+VALUES
+	(1,5),
+	(1,6),
+	(1,7),
+	(1,8),
+	
+	(2,1),
+	(2,6),
+	(2,7),
+
+	(3,1),
+	(3,5),
+	(3,6),
+	(3,7),
+
+	(4,7),
+	(4,8),
+
+	(5,1),
+	(5,7),
+
+	(6,2),
+	(6,3),
+	(6,5),
+	(6,6),
+	(6,7),
+	(6,8);
+
+INSERT INTO
+ASSOCIATED_GAMES(GroupId,GameId)
+VALUES
+
+	(1,3),
+	(1,14),
+	(2,2),
+	(2,4),
+	(2,13),
+	(2,20),
+	(2,28),
+	(3,2),
+	(3,4),
+	(3,13),
+	(3,20),
+	(3,28),
+	(6,1),
+	(6,3),
+	(6,5),
+	(6,7),
+	(6,28);
+
+
+INSERT INTO 
+REVIEWED_GAMES(ReviewId,GameId)
+VALUES
+	(1,5),
+	(2,2),
+	(3,9),
+	(4,10),
+	(5,7),
+	(6,1),
+	(7,9),
+	(8,20);
+
+INSERT INTO 
+GROUP_POSTS(GroupId,PostId)
+VALUES
+	(1,1),
+	(6,2),
+	(5,3),
+	(4,4),
+ 	(4,5),
+	(2,6),
+	(3,7);
 
 /******************************************************************/
-select * from GAMES;
-select * from PLAYERS;
-select * from DEVELOPERS;
-select * from POSTS;
-select * from REVIEWS;
-select * from GROUPS;
+
+/*                 SELECT                                 */
+
+/*PLAYER*/
+
+	/*CONTA*/
+/*
+SELECT Nickname,Wallet,Country,CONVERT(DATEDIFF('2020-05-09' ,PLAYERS.SignUpDate)/365 -0.5 ,signed) AS Age 
+from PLAYERS
+ORDER BY Nickname;
+*/
+	/*AMIGOS*/
+/*
+SELECT P1.Nickname JOGADOR,P2.Nickname AMIGOS
+from PLAYERS as P1
+	Join FRIENDS 
+		ON (P1.Id=FRIENDS.PlayerId1)
+	join PLAYERS as P2
+		ON (FRIENDS.PlayerId2=P2.Id)
+UNION
+SELECT P1.Nickname JOGADOR,P2.Nickname AMIGOS
+from PLAYERS as P1
+	Join FRIENDS 
+		ON (P1.Id=FRIENDS.PlayerId2)
+	join PLAYERS as P2
+		ON (FRIENDS.PlayerId1=P2.Id)
+ORDER BY JOGADOR, AMIGOS;
+*/
+	/*JOGOS*/
+/*
+SELECT Nickname,GAMES.Name
+from PLAYERS
+	Join GAME_LIBRARY 
+		ON (GAME_LIBRARY.PlayerId=PLAYERS.Id)
+	Join GAMES
+		ON (GAME_LIBRARY.GameId=GAMES.Id)
+ORDER BY Nickname,GAMES.Name;
+*/
+
+/*GAME*/
+
+	/*carateristicas*/
+/*
+SELECT Name,MinimumPlayerAge,DeveloperName,CONVERT(DATEDIFF('2020-05-08' ,GAMES.ReleaseDate)/365 -0.5 ,signed) AS Age ,Price
+FROM GAMES
+ORDER BY Name;
+*/
+
+	/*premios*/
+/*
+SELECT Name,GAME_ACHIEVEMENTS.Achievement
+FROM GAMES
+	join GAME_ACHIEVEMENTS
+	ON (GAME_ACHIEVEMENTS.GameId=GAMES.Id)
+	ORDER BY Name;
+*/
+
+	/*REVIEWS*/
+
+/*
+SELECT Name,PLAYERS.Nickname,REVIEWS.ReviewText,REVIEWS.Score
+FROM GAMES
+	JOIN REVIEWED_GAMES
+	ON(GAMES.Id=REVIEWED_GAMES.GameId)
+	JOIN REVIEWS
+	ON(REVIEWED_GAMES.ReviewId=REVIEWS.Id)
+	JOIN PLAYERS
+	ON(REVIEWS.UserId=PLAYERS.Id)
+	ORDER BY Name;
+*/
+
+/*DEVELOPER*/
+
+	/*Detalhes*/
+/*
+SELECT * FROM DEVELOPERS;
+*/
+	/*jogos*/
+/*
+SELECT DEVELOPERS.Name,GAMES.Name
+FROM DEVELOPERS
+	JOIN DEVELOPED
+	ON(DEVELOPERS.Name=DEVELOPED.DeveloperName)
+	JOIN GAMES
+	ON(DEVELOPED.GameId=GAMES.Id)
+	ORDER BY DEVELOPERS.Name;
+*/
+
+/*GROUPS_*/
+
+	/*nomes*/
+/*
+SELECT Name
+FROM GROUPS_;
+*/
+	/*jogos associados*/
+/*
+	SELECT GROUPS_.Name,GAMES.Name
+	from GROUPS_
+		JOIN ASSOCIATED_GAMES
+		ON(GROUPS_.Id=ASSOCIATED_GAMES.GroupId)
+		JOIN GAMES
+		ON(ASSOCIATED_GAMES.GameId=GAMES.Id)
+*/
+	/*posts*/	
+		/*todos os grupos*/
+/*
+		SELECT GROUPS_.Name,PLAYERS.Nickname,POSTS.PostText,POSTS.PostDate
+		FROM GROUPS_
+			JOIN GROUP_POSTS
+			ON(GROUPS_.Id=GROUP_POSTS.GroupId)
+			JOIN POSTS
+			ON(GROUP_POSTS.PostId=POSTS.Id)
+			JOIN PLAYERS
+			ON(POSTS.UserId=PLAYERS.Id)
+			ORDER BY GROUPS_.Name,POSTS.PostDate;
+*/
+		/*por grupo*/
+		/*
+		SELECT GROUPS_.Name , PLAYERS.Nickname , POSTS.PostText , POSTS.PostDate
+		FROM GROUPS_
+			JOIN GROUP_POSTS
+			ON(GROUPS_.Id=GROUP_POSTS.GroupId)
+			JOIN POSTS
+			ON(GROUP_POSTS.PostId=POSTS.Id)
+			JOIN PLAYERS
+			ON(POSTS.UserId=PLAYERS.Id)
+			where POSTS.GroupId=3	/* numero do grupo desejado*//*
+			ORDER BY GROUPS_.Name,POSTS.PostDate;
+		*/
+		/*por data(num dia/mês/ano*/
+/*
+		SELECT GROUPS_.Name , PLAYERS.Nickname , POSTS.PostText , POSTS.PostDate
+		FROM GROUPS_
+			JOIN GROUP_POSTS
+			ON(GROUPS_.Id=GROUP_POSTS.GroupId)
+			JOIN POSTS
+			ON(GROUP_POSTS.PostId=POSTS.Id)
+			JOIN PLAYERS
+			ON(POSTS.UserId=PLAYERS.Id)
+			where Year(POSTS.PostDate)=2020 and Month(POSTS.PostDate)=5 and Day(POSTS.PostDate)=4/*escolher a data pretendida*//*
+			ORDER BY GROUPS_.Name,POSTS.PostDate;
+*/
+		/*por palavra ou excerto*/
+		/*
+		SELECT GROUPS_.Name , PLAYERS.Nickname , POSTS.PostText , POSTS.PostDate
+		FROM GROUPS_
+			JOIN GROUP_POSTS
+			ON(GROUPS_.Id=GROUP_POSTS.GroupId)
+			JOIN POSTS
+			ON(GROUP_POSTS.PostId=POSTS.Id)
+			JOIN PLAYERS
+			ON(POSTS.UserId=PLAYERS.Id)
+			where POSTS.PostText like '%Tetris%'/*palavra ou excerto pretendida*//*
+			ORDER BY GROUPS_.Name,POSTS.PostDate;
+			*/
+		/* por pessoa*/
+/*
+		SELECT GROUPS_.Name , PLAYERS.Nickname , POSTS.PostText , POSTS.PostDate
+		FROM GROUPS_
+			JOIN GROUP_POSTS
+			ON(GROUPS_.Id=GROUP_POSTS.GroupId)
+			JOIN POSTS
+			ON(GROUP_POSTS.PostId=POSTS.Id)
+			JOIN PLAYERS
+			ON(POSTS.UserId=PLAYERS.Id)
+			where PLAYERS.Id=8 /*id do jogador*//*
+			ORDER BY GROUPS_.Name,POSTS.PostDate;*/
+			
